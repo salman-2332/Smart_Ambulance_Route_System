@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Ambulance Route System</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background: #f1f5f9;
+            color: #172033;
+        }
+
+        header {
+            background: #b71c1c;
+            color: white;
+            text-align: center;
+            padding: 25px;
+        }
+
+        header h1 {
+            font-size: 30px;
+        }
+
+        header p {
+            margin-top: 8px;
+            font-size: 16px;
+        }
+
+        .container {
+            width: 94%;
+            max-width: 1250px;
+            margin: 25px auto;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 13px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .main-button {
+            width: 100%;
+            margin-top: 20px;
+            padding: 16px;
+            border: none;
+            border-radius: 9px;
+            background: #d32f2f;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .main-button:hover {
+            background: #b71c1c;
+        }
+
+        /* MAP */
+        #map {
+            width: 100%;
+            height: 520px;
+            border: 3px solid #ddd;
+            border-radius: 12px;
+            background: #dbeafe;
+        }
+
+        .map-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .map-button {
+            padding: 15px;
+            border: none;
+            border-radius: 9px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .ambulance {
+            background: #1565c0;
+        }
+
+        .hospital {
+            background: #2e7d32;
+        }
+
+        .location {
+            background: #7b1fa2;
+        }
+
+        .help {
+            margin-top: 15px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        #status {
+            margin-top: 18px;
+            background: #f1f1f1;
+            padding: 15px;
+            text-align: center;
+            border-radius: 9px;
+            font-weight: bold;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+        }
+
+        .stat {
+            background: #f7f7f7;
+            padding: 25px;
+            text-align: center;
+            border-radius: 10px;
+        }
+
+        .stat h3 {
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .stat p {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .critical {
+            color: #d32f2f;
+        }
+
+        .green {
+            color: #168a3a;
+        }
+
+        @media(max-width: 750px) {
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .map-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            #map {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header>
+    <h1>🚑 Smart Ambulance Route System</h1>
+    <p>AI-Powered Emergency Route Intelligence</p>
+</header>
+
+<div class="container">
+
+    <!-- EMERGENCY FORM -->
+
+    <div class="card">
+
+        <h2>🚨 Emergency Route Request</h2>
+
+        <div class="form-grid">
+
+            <div>
+                <label>Ambulance Location</label>
+                <input id="ambulanceLocation"
+                       value="Hyderabad">
+            </div>
+
+            <div>
+                <label>Emergency Level</label>
+
+                <select id="emergencyLevel">
+                    <option value="CRITICAL">🔴 Critical</option>
+                    <option value="HIGH">🟠 High</option>
+                    <option value="MODERATE">🟡 Moderate</option>
+                </select>
+            </div>
+
+            <div>
+                <label>Hospital</label>
+
+                <input id="hospitalLocation"
+                       value="Hyderabad Hospital">
+            </div>
+
+            <div>
+                <label>Patient Condition
+
+                            <select id="patientCondition">
+                <option>Cardiac Emergency</option>
+                <option>Accident</option>
+                <option>Severe Injury</option>
+                <option>Respiratory Emergency</option>
+                <option>Other Emergency</option>
+            </select>
+
+        </div>
+
+    </div>
+
+    <button class="main-button"
+            onclick="calculateRoute()">
+
+        🚨 FIND SMART ROUTE
+
+    </button>
+
+    </div>
+
+
+    <!-- MAP -->
+
+    <div class="card">
+
+        <h2>🗺️ Live Hyderabad Route Map</h2>
+
+        <div id="map"></div>
+
+        <div class="map-buttons">
+
+            <button class="map-button ambulance"
+                    onclick="selectAmbulance()">
+
+                🚑 SET AMBULANCE
+
+            </button>
+
+            <button class="map-button hospital"
+                    onclick="selectHospital()">
+
+                🏥 SET HOSPITAL
+
+            </button>
+
+            <button class="map-button location"
+                    onclick="getMyLocation()">
+
+                📍 MY LOCATION
+
+            </button>
+
+        </div>
+
+        <p class="help">
+            Click <b>SET AMBULANCE</b>, then click on the map.
+            <br>
+            Click <b>SET HOSPITAL</b>, then click on the map.
+        </p>
+
+        <div id="status">
+            🟢 Ready. Select ambulance and hospital locations.
+        </div>
+
+    </div>
+
+
+    <!-- ROUTE INFORMATION -->
+
+    <div class="card">
+
+        <h2>📊 Route Information</h2>
+
+        <div class="stats">
+
+            <div class="stat">
+                <h3>Distance</h3>
+                <p id="distance">--</p>
+            </div>
+
+            <div class="stat">
+                <h3>Estimated Time</h3>
+                <p id="time">--</p>
+            </div>
+
+            <div class="stat">
+                <h3>Traffic</h3>
+                <p id="traffic" class="green">--</p>
+            </div>
+
+            <div class="stat">
+                <h3>Emergency</h3>
+                <p id="emergency" class="critical">
+                    CRITICAL
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- LEAFLET MAP -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+
+<script>
+
+const map = L.map("map").setView(
+    [17.3850, 78.4867],
+    12
+);
+
+L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+    }
+).addTo(map);
+
+
+let ambulancePosition = [
+    17.4239,
+    78.4738
+];
+
+let hospitalPosition = [
+    17.3716,
+    78.4757
+];
+
+
+let ambulanceMarker =
+    L.marker(ambulancePosition)
+    .addTo(map)
+    .bindPopup("🚑 Ambulance");
+
+
+let hospitalMarker =
+    L.marker(hospitalPosition)
+    .addTo(map)
+    .bindPopup("🏥 Hospital");
+
+
+let routeLine = null;
+let selectionMode = null;
+
+
+function selectAmbulance() {
+
+    selectionMode = "ambulance";
+
+    document.getElementById("status").innerHTML =
+        "🚑 Click anywhere on the map to place the ambulance.";
+
+}
+
+
+function selectHospital() {
+
+    selectionMode = "hospital";
+
+    document.getElementById("status").innerHTML =
+        "🏥 Click anywhere on the map to place the hospital.";
+
+}
+
+
+map.on("click", function(event) {
+
+    const lat = event.latlng.lat;
+    const lng = event.latlng.lng;
+
+
+    if (selectionMode === "ambulance") {
+
+        ambulancePosition = [lat, lng];
+
+        map.removeLayer(ambulanceMarker);
+
+        ambulanceMarker =
+            L.marker(ambulancePosition)
+            .addTo(map)
+            .bindPopup("🚑 Ambulance Location")
+            .openPopup();
+
+        document.getElementById("ambulanceLocation").value =
+            lat.toFixed(5) + ", " + lng.toFixed(5);
+
+        document.getElementById("status").innerHTML =
+            "✅ Ambulance location selected.";
+
+        selectionMode = null;
+
+    }
+
+
+    else if (selectionMode === "hospital") {
+
+        hospitalPosition = [lat, lng];
+
+        map.removeLayer(hospitalMarker);
+
+        hospitalMarker =
+            L.marker(hospitalPosition)
+            .addTo(map)
+            .bindPopup("🏥 Hospital Destination")
+            .openPopup();
+
+        document.getElementById("hospitalLocation").value =
+            lat.toFixed(5) + ", " + lng.toFixed(5);
+
+        document.getElementById("status").innerHTML =
+            "✅ Hospital location selected.";
+
+        selectionMode = null;
+
+    }
+
+});
+
+
+function getMyLocation() {
+
+    if (!navigator.geolocation) {
+
+        alert("GPS is not supported by your browser.");
+
+        return;
+    }
+
+
+    document.getElementById("status").innerHTML =
+        "📍 Getting your location...";
+
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(position) {
+
+            const lat =
+                position.coords.latitude;
+
+            const lng =
+                position.coords.longitude;
+
+
+            ambulancePosition = [lat, lng];
+
+
+            map.removeLayer(ambulanceMarker);
+
+
+            ambulanceMarker =
+                L.marker(ambulancePosition)
+                .addTo(map)
+                .bindPopup("🚑 Your Ambulance")
+                .openPopup();
+
+
+            map.setView(
+                [lat, lng],
+                15
+            );
+
+
+            document.getElementById("ambulanceLocation").value =
+                lat.toFixed(5) + ", " + lng.toFixed(5);
+
+
+            document.getElementById("status").innerHTML =
+                "✅ Your location is now the ambulance location.";
+
+        },
+
+        function() {
+
+            document.getElementById("status").innerHTML =
+                "❌ Location permission denied.";
+
+        }
+
+    );
+
+}
+
+
+async function calculateRoute() {
+
+    document.getElementById("status").innerHTML =
+        "⏳ Finding road route...";
+
+
+    const start =
+        ambulancePosition[1] +
+        "," +
+        ambulancePosition[0];
+
+
+    const end =
+        hospitalPosition[1] +
+        "," +
+        hospitalPosition[0];
+
+
+    const url =
+        "https://router.project-osrm.org/route/v1/driving/" +
+        start +
+        ";" +
+        end +
+        "?overview=full&geometries=geojson";
+
+
+    try {
+
+        const response =
+            await fetch(url);
+
+        const data =
+            await response.json();
+
+
+        if (!data.routes ||
+            data.routes.length === 0) {
+
+            document.getElementById("status").innerHTML =
+                "❌ No road route found.";
+
+            return;
+        }
+
+
+        const route =
+            data.routes[0];
+
+
+        if (routeLine) {
+
+            map.removeLayer(routeLine);
+
+        }
+
+
+        routeLine =
+            L.geoJSON(
+                route.geometry,
+                {
+                    style: {
+                        weight: 7,
+                        opacity: 0.9
+                    }
+                }
+            ).addTo(map);
+
+
+        const distance =
+            (route.distance / 1000).toFixed(2);
+
+
+        const minutes =
+            Math.ceil(route.duration / 60);
+
+
+        document.getElementById("distance").innerHTML =
+            distance + " km";
+
+
+        document.getElementById("time").innerHTML =
+            minutes + " min";
+
+
+        const emergency =
+            document.getElementById("emergencyLevel").value;
+
+
+        document.getElementById("emergency").innerHTML =
+            emergency;
+
+
+        document.getElementById("traffic").innerHTML =
+            "ROUTE DATA";
+
+
+        document.getElementById("status").innerHTML =
+            "🟢 Emergency route calculated successfully.";
+
+
+        map.fitBounds(
+            routeLine.getBounds(),
+            {
+                padding: [30, 30]
+            }
+        );
+
+    }
+
+    catch(error) {
+
+        console.error(error);
+
+        document.getElementById("status").innerHTML =
+            "❌ Route service unavailable. Check your internet connection.";
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>

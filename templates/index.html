@@ -1,0 +1,2057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Ambulance Route System</title>
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f7fb;
+            color: #222;
+        }
+
+        header {
+            background: #b71c1c;
+            color: white;
+            text-align: center;
+            padding: 22px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        header p {
+            margin: 8px 0 0;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 1200px;
+            margin: 20px auto;
+        }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 12px rgba(0,0,0,0.1);
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+        }
+
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 7px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 7px;
+            font-size: 15px;
+        }
+
+        button {
+            border: none;
+            padding: 11px 15px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 7px;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .blue {
+            background: #1976d2;
+            color: white;
+        }
+
+        .green {
+            background: #388e3c;
+            color: white;
+        }
+
+        .red {
+            background: #d32f2f;
+            color: white;
+        }
+
+        .route-btn {
+            width: 100%;
+            font-size: 17px;
+            margin-top: 20px;
+            padding: 14px;
+        }
+
+        #map {
+            width: 100%;
+            height: 500px;
+            border-radius: 10px;
+        }
+
+        .map-buttons {
+            margin-bottom: 10px;
+        }
+
+        #status {
+            margin-top: 12px;
+            padding: 12px;
+            background: #f1f1f1;
+            border-radius: 7px;
+        }
+
+        .search-results,
+        .hospital-list {
+            display: none;
+            margin-top: 8px;
+            border: 1px solid #ddd;
+            border-radius: 7px;
+            overflow: hidden;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .search-result,
+        .hospital-card {
+            padding: 12px;
+            background: white;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+
+        .search-result:hover,
+        .hospital-card:hover {
+            background: #f2f2f2;
+        }
+
+        .hospital-card strong {
+            color: #b71c1c;
+        }
+
+        .hospital-search-note {
+            font-size: 13px;
+            color: #666;
+            margin-top: 7px;
+        }
+
+        .route-info {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .info-box {
+            background: #f7f7f7;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .info-box h3 {
+            margin: 0 0 8px;
+        }
+
+        @media(max-width: 700px) {
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .route-info {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            #map {
+                height: 400px;
+            }
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<header>
+
+    <h1>🚑 Smart Ambulance Route System</h1>
+
+    <p>
+        AI-Powered Emergency Route Intelligence
+    </p>
+
+</header>
+
+
+<div class="container">
+
+
+    <!-- EMERGENCY FORM -->
+
+    <div class="panel">
+
+        <h2>🚨 Emergency Request</h2>
+
+        <div class="form-grid">
+
+
+            <!-- AMBULANCE -->
+
+            <div>
+
+                <label>
+                    🚑 Ambulance Location
+                </label>
+
+                <input
+                    type="text"
+                    id="ambulanceSearch"
+                    placeholder="Example: Secunderabad Railway Station">
+
+                <button
+                    class="blue"
+                    onclick="searchAmbulanceLocation()">
+
+                    🔍 SEARCH LOCATION
+
+                </button>
+
+                <button
+                    class="blue"
+                    onclick="setAmbulanceMode()">
+
+                    📍 SET ON MAP
+
+                </button>
+
+                <div
+                    id="ambulanceResults"
+                    class="search-results">
+                </div>
+
+            </div>
+
+
+            <!-- EMERGENCY -->
+
+            <div>
+
+                <label>
+                    🚨 Emergency Level
+                </label>
+
+                <select id="emergency">
+
+                    <option>Critical</option>
+                    <option>High</option>
+                    <option>Moderate</option>
+
+                </select>
+
+            </div>
+
+
+            <!-- HOSPITAL -->
+
+            <div>
+
+                <label>
+                    🏥 Hospital
+                </label>
+
+                <input
+                    type="text"
+                    id="hospitalSearch"
+                    placeholder="Search hospital or area">
+
+                <button
+                    class="green"
+                    onclick="searchHospitals()">
+
+                    🔍 SEARCH HOSPITAL
+
+                </button>
+
+                <div class="hospital-search-note">
+
+                    Major Hyderabad hospitals are available below.
+                    You can also search for another hospital.
+
+                </div>
+
+                <div
+                    id="hospitalList"
+                    class="hospital-list">
+                </div>
+
+            </div>
+
+
+            <!-- PATIENT -->
+
+            <div>
+
+                <label>
+                    🧑‍⚕️ Patient Condition
+                </label>
+
+                <select id="condition">
+
+                    <option>Cardiac Emergency</option>
+
+                    <option>Accident</option>
+
+                    <option>Severe Injury</option>
+
+                    <option>Respiratory Emergency</option>
+
+                    <option>Other Emergency</option>
+
+                </select>
+
+            </div>
+
+        </div>
+
+
+        <button
+            class="red route-btn"
+            onclick="findRoute()">
+
+            🚨 FIND SMART ROUTE
+
+        </button>
+
+        <button
+    class="green route-btn"
+    onclick="startAmbulanceJourney()">
+
+    🚑 START AMBULANCE JOURNEY
+
+</button>
+
+    </div>
+
+
+
+    <!-- MAP -->
+
+    <div class="panel">
+
+        <h2>
+            🗺️ Emergency Map
+        </h2>
+
+        <div class="map-buttons">
+
+            <button
+                class="blue"
+                onclick="setAmbulanceMode()">
+
+                🚑 SET AMBULANCE
+
+            </button>
+
+            <button
+                class="green"
+                onclick="setHospitalMode()">
+
+                🏥 SET HOSPITAL
+
+            </button>
+
+            <button
+                class="blue"
+                onclick="getMyLocation()">
+
+                📍 MY LOCATION
+
+            </button>
+
+        </div>
+
+        <div id="map"></div>
+
+        <div id="status">
+
+            Ready. Search a location or select points on the map.
+
+        </div>
+
+    </div>
+
+
+
+    <!-- ROUTE INFORMATION -->
+
+    <div class="panel">
+
+        <h2>
+            📊 Route Information
+        </h2>
+
+        <div class="route-info">
+
+
+            <div class="info-box">
+
+                <h3>
+                    📏 Distance
+                </h3>
+
+                <span id="distance">
+                    --
+                </span>
+
+            </div>
+
+
+            <div class="info-box">
+
+                <h3>
+                    ⏱️ Live ETA
+                </h3>
+
+                <span id="eta">
+                    --
+                </span>
+
+            </div>
+
+
+            <div class="info-box">
+
+                <h3>
+                    🚦 Traffic Delay
+                </h3>
+
+                <span id="traffic">
+                    --
+                </span>
+
+            </div>
+
+
+            <div class="info-box">
+
+                <h3>
+                    🚨 Emergency
+                </h3>
+
+                <span id="emergencyDisplay">
+                    --
+                </span>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<script
+    src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js">
+</script>
+
+
+<script>
+
+
+// =====================================================
+// MAP
+// =====================================================
+
+const map =
+    L.map("map").setView(
+        [17.3850, 78.4867],
+        12
+    );
+
+
+L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        maxZoom: 19,
+        attribution:
+            "&copy; OpenStreetMap contributors"
+    }
+).addTo(map);
+
+
+// =====================================================
+// DEFAULT POSITIONS
+// =====================================================
+
+let ambulancePosition = [
+    17.4239,
+    78.4738
+];
+
+let hospitalPosition = [
+    17.3716,
+    78.4757
+];
+
+
+let ambulanceMarker =
+    L.marker(
+        ambulancePosition
+    )
+    .addTo(map)
+    .bindPopup(
+        "🚑 Ambulance"
+    );
+
+
+let hospitalMarker =
+    L.marker(
+        hospitalPosition
+    )
+    .addTo(map)
+    .bindPopup(
+        "🏥 Hospital"
+    );
+
+
+let routeLine = null;
+
+let selectingMode = null;
+
+
+
+// =====================================================
+// MAJOR HYDERABAD HOSPITALS
+// =====================================================
+
+const hospitals = [
+
+    {
+        name: "Apollo Hospitals Jubilee Hills",
+        area: "Jubilee Hills",
+        lat: 17.4239,
+        lng: 78.4115
+    },
+
+    {
+        name: "Yashoda Hospitals Somajiguda",
+        area: "Somajiguda",
+        lat: 17.4216,
+        lng: 78.4597
+    },
+
+    {
+        name: "Yashoda Hospitals Secunderabad",
+        area: "Secunderabad",
+        lat: 17.4399,
+        lng: 78.4983
+    },
+
+    {
+        name: "Yashoda Hospitals Hitech City",
+        area: "Hitech City",
+        lat: 17.4650,
+        lng: 78.3715
+    },
+
+    {
+        name: "KIMS Hospitals Secunderabad",
+        area: "Secunderabad",
+        lat: 17.4416,
+        lng: 78.4876
+    },
+
+    {
+        name: "KIMS Hospitals Kondapur",
+        area: "Kondapur",
+        lat: 17.4707,
+        lng: 78.3725
+    },
+
+    {
+        name: "AIG Hospitals",
+        area: "Gachibowli",
+        lat: 17.4429,
+        lng: 78.3565
+    },
+
+    {
+        name: "CARE Hospitals Banjara Hills",
+        area: "Banjara Hills",
+        lat: 17.4156,
+        lng: 78.4347
+    },
+
+    {
+        name: "CARE Hospitals Hitech City",
+        area: "Hitech City",
+        lat: 17.4500,
+        lng: 78.3800
+    },
+
+    {
+        name: "Continental Hospitals",
+        area: "Gachibowli / Financial District",
+        lat: 17.4152,
+        lng: 78.3450
+    },
+
+    {
+        name: "Medicover Hospitals Hitech City",
+        area: "Hitech City",
+        lat: 17.4510,
+        lng: 78.3815
+    },
+
+    {
+        name: "Aster Prime Hospital",
+        area: "Ameerpet",
+        lat: 17.4370,
+        lng: 78.4480
+    },
+
+    {
+        name: "Gleneagles AWARE Hospital",
+        area: "LB Nagar",
+        lat: 17.3490,
+        lng: 78.5520
+    },
+
+    {
+        name: "Star Hospitals Banjara Hills",
+        area: "Banjara Hills",
+        lat: 17.4148,
+        lng: 78.4480
+    },
+
+    {
+        name: "Kamineni Hospitals LB Nagar",
+        area: "LB Nagar",
+        lat: 17.3457,
+        lng: 78.5523
+    },
+
+    {
+        name: "OMNI Hospitals Kothapet",
+        area: "Kothapet / Dilsukhnagar",
+        lat: 17.3680,
+        lng: 78.5400
+    },
+
+    {
+        name: "Citizens Hospital",
+        area: "Nallagandla",
+        lat: 17.4695,
+        lng: 78.3030
+    },
+
+    {
+        name: "Basavatarakam Indo American Cancer Hospital",
+        area: "Banjara Hills",
+        lat: 17.4118,
+        lng: 78.4340
+    },
+
+    {
+        name: "NIMS Hospital",
+        area: "Punjagutta",
+        lat: 17.4140,
+        lng: 78.4570
+    },
+
+    {
+        name: "Osmania General Hospital",
+        area: "Afzal Gunj",
+        lat: 17.3713,
+        lng: 78.4744
+    },
+
+    {
+        name: "Gandhi Hospital",
+        area: "Musheerabad",
+        lat: 17.4140,
+        lng: 78.5000
+    },
+
+    {
+        name: "Niloufer Hospital",
+        area: "Red Hills",
+        lat: 17.3950,
+        lng: 78.4630
+    },
+
+    {
+        name: "MNJ Institute of Oncology",
+        area: "Lakdikapul",
+        lat: 17.3970,
+        lng: 78.4590
+    },
+
+    {
+        name: "Rainbow Children's Hospital Banjara Hills",
+        area: "Banjara Hills",
+        lat: 17.4165,
+        lng: 78.4490
+    }
+
+];
+
+
+
+// =====================================================
+// SHOW MAJOR HOSPITALS
+// =====================================================
+
+function showHospitalList() {
+
+    const list =
+        document.getElementById(
+            "hospitalList"
+        );
+
+    list.innerHTML = "";
+
+    hospitals.forEach(
+        hospital => {
+
+            const card =
+                document.createElement(
+                    "div"
+                );
+
+            card.className =
+                "hospital-card";
+
+            card.innerHTML = `
+                <strong>
+                    🏥 ${hospital.name}
+                </strong>
+                <br>
+                📍 ${hospital.area}
+            `;
+
+            card.onclick =
+                function() {
+
+                    selectHospital(
+                        hospital
+                    );
+
+                };
+
+            list.appendChild(
+                card
+            );
+
+        }
+    );
+
+    list.style.display =
+        "block";
+}
+
+
+
+// =====================================================
+// SEARCH HOSPITAL
+// =====================================================
+
+async function searchHospitals() {
+
+    const search =
+        document.getElementById(
+            "hospitalSearch"
+        ).value
+        .trim()
+        .toLowerCase();
+
+
+    const list =
+        document.getElementById(
+            "hospitalList"
+        );
+
+
+    list.innerHTML = "";
+
+
+    // Empty search = show major hospitals
+
+    if (search === "") {
+
+        showHospitalList();
+
+        return;
+    }
+
+
+    // First search our major hospital list
+
+    const localResults =
+        hospitals.filter(
+            hospital =>
+
+                hospital.name
+                    .toLowerCase()
+                    .includes(search)
+
+                ||
+
+                hospital.area
+                    .toLowerCase()
+                    .includes(search)
+        );
+
+
+    localResults.forEach(
+        hospital => {
+
+            const card =
+                document.createElement(
+                    "div"
+                );
+
+            card.className =
+                "hospital-card";
+
+            card.innerHTML = `
+                <strong>
+                    🏥 ${hospital.name}
+                </strong>
+                <br>
+                📍 ${hospital.area}
+            `;
+
+            card.onclick =
+                function() {
+
+                    selectHospital(
+                        hospital
+                    );
+
+                };
+
+            list.appendChild(
+                card
+            );
+
+        }
+    );
+
+
+    // Also search OpenStreetMap
+
+    const searching =
+        document.createElement(
+            "div"
+        );
+
+    searching.className =
+        "hospital-card";
+
+    searching.innerHTML =
+        "🔎 Searching other hospitals...";
+
+    list.appendChild(
+        searching
+    );
+
+    list.style.display =
+        "block";
+
+
+    try {
+
+        const url =
+            "https://nominatim.openstreetmap.org/search" +
+            "?format=json" +
+            "&limit=8" +
+            "&q=" +
+            encodeURIComponent(
+                search +
+                ", Hyderabad, Telangana, India"
+            );
+
+
+        const response =
+            await fetch(
+                url,
+                {
+                    headers: {
+                        "Accept":
+                            "application/json"
+                    }
+                }
+            );
+
+
+        const results =
+            await response.json();
+
+
+        searching.remove();
+
+
+        results.forEach(
+            place => {
+
+                const card =
+                    document.createElement(
+                        "div"
+                    );
+
+                card.className =
+                    "hospital-card";
+
+                card.innerHTML = `
+                    <strong>
+                        🏥 ${place.display_name}
+                    </strong>
+                    <br>
+                    📍 OpenStreetMap result
+                `;
+
+                card.onclick =
+                    function() {
+
+                        selectHospitalFromSearch(
+                            place
+                        );
+
+                    };
+
+                list.appendChild(
+                    card
+                );
+
+            }
+        );
+
+
+        if (
+            localResults.length === 0 &&
+            results.length === 0
+        ) {
+
+            list.innerHTML =
+                `<div class="hospital-card">
+                    ❌ No hospital found.
+                </div>`;
+
+        }
+
+    }
+
+    catch(error) {
+
+        console.error(error);
+
+        searching.innerHTML =
+            "⚠️ Online hospital search unavailable. Major hospitals are still available.";
+
+    }
+
+}
+
+
+
+// =====================================================
+// SELECT PRESET HOSPITAL
+// =====================================================
+
+function selectHospital(
+    hospital
+) {
+
+    hospitalPosition = [
+        hospital.lat,
+        hospital.lng
+    ];
+
+
+    hospitalMarker
+        .setLatLng(
+            hospitalPosition
+        )
+        .bindPopup(
+            "🏥 " +
+            hospital.name
+        )
+        .openPopup();
+
+
+    document.getElementById(
+        "hospitalSearch"
+    ).value =
+        hospital.name;
+
+
+    document.getElementById(
+        "hospitalList"
+    ).style.display =
+        "none";
+
+
+    map.setView(
+        hospitalPosition,
+        15
+    );
+
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        "🏥 Hospital selected: " +
+        hospital.name;
+
+}
+
+
+
+// =====================================================
+// SELECT ONLINE HOSPITAL
+// =====================================================
+
+function selectHospitalFromSearch(
+    place
+) {
+
+    const lat =
+        parseFloat(
+            place.lat
+        );
+
+    const lng =
+        parseFloat(
+            place.lon
+        );
+
+
+    hospitalPosition = [
+        lat,
+        lng
+    ];
+
+
+    hospitalMarker
+        .setLatLng(
+            hospitalPosition
+        )
+        .bindPopup(
+            "🏥 " +
+            place.display_name
+        )
+        .openPopup();
+
+
+    document.getElementById(
+        "hospitalSearch"
+    ).value =
+        place.display_name;
+
+
+    document.getElementById(
+        "hospitalList"
+    ).style.display =
+        "none";
+
+
+    map.setView(
+        hospitalPosition,
+        15
+    );
+
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        "🏥 Hospital selected: " +
+        place.display_name;
+
+}
+
+
+
+// =====================================================
+// AMBULANCE LOCATION SEARCH
+// =====================================================
+
+async function searchPlace(
+    query,
+    resultBoxId,
+    type
+) {
+
+    const resultBox =
+        document.getElementById(
+            resultBoxId
+        );
+
+
+    if (
+        query.trim() === ""
+    ) {
+
+        resultBox.innerHTML =
+            "<div class='search-result'>Enter a location first.</div>";
+
+        resultBox.style.display =
+            "block";
+
+        return;
+    }
+
+
+    resultBox.innerHTML =
+        "<div class='search-result'>🔎 Searching...</div>";
+
+    resultBox.style.display =
+        "block";
+
+
+    try {
+
+        const url =
+            "https://nominatim.openstreetmap.org/search" +
+            "?format=json" +
+            "&limit=5" +
+            "&q=" +
+            encodeURIComponent(
+                query
+            );
+
+
+        const response =
+            await fetch(
+                url,
+                {
+                    headers: {
+                        "Accept":
+                            "application/json"
+                    }
+                }
+            );
+
+
+        const results =
+            await response.json();
+
+
+        resultBox.innerHTML =
+            "";
+
+
+        if (
+            results.length === 0
+        ) {
+
+            resultBox.innerHTML =
+                "<div class='search-result'>❌ Location not found.</div>";
+
+            return;
+        }
+
+
+        results.forEach(
+            place => {
+
+                const item =
+                    document.createElement(
+                        "div"
+                    );
+
+                item.className =
+                    "search-result";
+
+                item.innerHTML =
+                    "📍 " +
+                    place.display_name;
+
+                item.onclick =
+                    function() {
+
+                        selectSearchResult(
+                            place,
+                            type
+                        );
+
+                    };
+
+                resultBox.appendChild(
+                    item
+                );
+
+            }
+        );
+
+    }
+
+    catch(error) {
+
+        console.error(error);
+
+        resultBox.innerHTML =
+            "<div class='search-result'>❌ Search failed.</div>";
+
+    }
+
+}
+
+
+
+// =====================================================
+// AMBULANCE SEARCH
+// =====================================================
+
+function searchAmbulanceLocation() {
+
+    const query =
+        document.getElementById(
+            "ambulanceSearch"
+        ).value;
+
+
+    searchPlace(
+        query,
+        "ambulanceResults",
+        "ambulance"
+    );
+
+}
+
+
+
+// =====================================================
+// SELECT AMBULANCE SEARCH RESULT
+// =====================================================
+
+function selectSearchResult(
+    place,
+    type
+) {
+
+    const lat =
+        parseFloat(
+            place.lat
+        );
+
+    const lng =
+        parseFloat(
+            place.lon
+        );
+
+
+    if (
+        type === "ambulance"
+    ) {
+
+        ambulancePosition = [
+            lat,
+            lng
+        ];
+
+
+        ambulanceMarker
+            .setLatLng(
+                ambulancePosition
+            )
+            .bindPopup(
+                "🚑 Ambulance Location"
+            )
+            .openPopup();
+
+
+        document.getElementById(
+            "ambulanceSearch"
+        ).value =
+            place.display_name;
+
+
+        document.getElementById(
+            "ambulanceResults"
+        ).style.display =
+            "none";
+
+
+        document.getElementById(
+            "status"
+        ).innerText =
+            "🚑 Ambulance location selected.";
+
+    }
+
+
+    map.setView(
+        [lat, lng],
+        15
+    );
+
+}
+
+
+
+// =====================================================
+// SET AMBULANCE MODE
+// =====================================================
+
+function setAmbulanceMode() {
+
+    selectingMode =
+        "ambulance";
+
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        "Click on the map to set ambulance location.";
+
+}
+
+
+
+// =====================================================
+// SET HOSPITAL MODE
+// =====================================================
+
+function setHospitalMode() {
+
+    selectingMode =
+        "hospital";
+
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        "Click on the map to set hospital location.";
+
+}
+
+
+
+// =====================================================
+// MAP CLICK
+// =====================================================
+
+map.on(
+    "click",
+    function(e) {
+
+        if (
+            selectingMode ===
+            "ambulance"
+        ) {
+
+            ambulancePosition = [
+                e.latlng.lat,
+                e.latlng.lng
+            ];
+
+
+            ambulanceMarker
+                .setLatLng(
+                    ambulancePosition
+                )
+                .bindPopup(
+                    "🚑 Ambulance"
+                )
+                .openPopup();
+
+
+            document.getElementById(
+                "status"
+            ).innerText =
+                "🚑 Ambulance location updated.";
+
+        }
+
+
+        else if (
+            selectingMode ===
+            "hospital"
+        ) {
+
+            hospitalPosition = [
+                e.latlng.lat,
+                e.latlng.lng
+            ];
+
+
+            hospitalMarker
+                .setLatLng(
+                    hospitalPosition
+                )
+                .bindPopup(
+                    "🏥 Hospital"
+                )
+                .openPopup();
+
+
+            document.getElementById(
+                "status"
+            ).innerText =
+                "🏥 Hospital location updated.";
+
+        }
+
+
+        selectingMode =
+            null;
+
+    }
+);
+
+
+
+// =====================================================
+// CURRENT LOCATION
+// =====================================================
+
+function getMyLocation() {
+
+    if (
+        !navigator.geolocation
+    ) {
+
+        alert(
+            "Geolocation is not supported by this browser."
+        );
+
+        return;
+    }
+
+
+    navigator.geolocation.getCurrentPosition(
+
+        function(position) {
+
+            const lat =
+                position.coords.latitude;
+
+            const lng =
+                position.coords.longitude;
+
+
+            ambulancePosition = [
+                lat,
+                lng
+            ];
+
+
+            ambulanceMarker
+                .setLatLng(
+                    ambulancePosition
+                )
+                .bindPopup(
+                    "🚑 Your Location"
+                )
+                .openPopup();
+
+
+            map.setView(
+                ambulancePosition,
+                15
+            );
+
+
+            document.getElementById(
+                "ambulanceSearch"
+            ).value =
+                "Current Location";
+
+
+            document.getElementById(
+                "status"
+            ).innerText =
+                "📍 Your current location is being used as the ambulance location.";
+
+        },
+
+        function() {
+
+            alert(
+                "Unable to get your location. Please allow location access."
+            );
+
+        }
+
+    );
+
+}
+
+
+
+// =====================================================
+// GOOGLE POLYLINE DECODER
+// =====================================================
+
+function decodePolyline(
+    encoded
+) {
+
+    let points = [];
+
+    let index = 0;
+
+    let lat = 0;
+
+    let lng = 0;
+
+
+    while (
+        index <
+        encoded.length
+    ) {
+
+        let b;
+
+        let shift = 0;
+
+        let result = 0;
+
+
+        do {
+
+            b =
+                encoded.charCodeAt(
+                    index++
+                ) - 63;
+
+            result |=
+                (b & 0x1f) <<
+                shift;
+
+            shift += 5;
+
+        }
+        while (
+            b >= 0x20
+        );
+
+
+        const dlat =
+            (result & 1)
+                ? ~(result >> 1)
+                : (result >> 1);
+
+
+        lat += dlat;
+
+
+        shift = 0;
+
+        result = 0;
+
+
+        do {
+
+            b =
+                encoded.charCodeAt(
+                    index++
+                ) - 63;
+
+            result |=
+                (b & 0x1f) <<
+                shift;
+
+            shift += 5;
+
+        }
+        while (
+            b >= 0x20
+        );
+
+
+        const dlng =
+            (result & 1)
+                ? ~(result >> 1)
+                : (result >> 1);
+
+
+        lng += dlng;
+
+
+        points.push([
+            lat / 100000,
+            lng / 100000
+        ]);
+
+    }
+
+
+    return points;
+
+}
+
+
+
+// =====================================================
+// GOOGLE TRAFFIC-AWARE ROUTE
+// =====================================================
+
+async function findRoute() {
+
+    document.getElementById(
+        "status"
+    ).innerText =
+        "🚦 Calculating traffic-aware route...";
+
+
+    try {
+
+        const response =
+            await fetch(
+                "/api/traffic-route",
+                {
+
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body: JSON.stringify({
+
+                        origin: {
+
+                            lat:
+                                ambulancePosition[0],
+
+                            lng:
+                                ambulancePosition[1]
+
+                        },
+
+                        destination: {
+
+                            lat:
+                                hospitalPosition[0],
+
+                            lng:
+                                hospitalPosition[1]
+
+                        }
+
+                    })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+
+            let errorMessage =
+                "Unable to calculate route.";
+
+
+            if (
+                typeof data.error ===
+                "string"
+            ) {
+
+                errorMessage =
+                    data.error;
+
+            }
+
+            else if (
+                data.error
+            ) {
+
+                errorMessage =
+                    JSON.stringify(
+                        data.error
+                    );
+
+            }
+
+
+            throw new Error(
+                errorMessage
+            );
+
+        }
+
+
+        if (routeLine) {
+
+            map.removeLayer(
+                routeLine
+            );
+
+        }
+
+
+        const routePoints =
+            decodePolyline(
+                data.polyline
+            );
+
+
+        routeLine =
+            L.polyline(
+                routePoints,
+                {
+                    weight: 6,
+                    opacity: 0.85
+                }
+            ).addTo(map);
+
+
+        map.fitBounds(
+            routeLine.getBounds(),
+            {
+                padding: [
+                    30,
+                    30
+                ]
+            }
+        );
+
+
+        document.getElementById(
+            "distance"
+        ).innerText =
+            data.distance_km +
+            " km";
+
+
+        document.getElementById(
+            "eta"
+        ).innerText =
+            data.live_eta_minutes +
+            " min";
+
+
+        if (
+            data.traffic_delay_minutes >
+            0
+        ) {
+
+            document.getElementById(
+                "traffic"
+            ).innerText =
+                "+" +
+                data.traffic_delay_minutes +
+                " min delay";
+
+        }
+
+        else {
+
+            document.getElementById(
+                "traffic"
+            ).innerText =
+                "Low traffic delay";
+
+        }
+
+
+        document.getElementById(
+            "emergencyDisplay"
+        ).innerText =
+            document.getElementById(
+                "emergency"
+            ).value;
+
+
+        document.getElementById(
+            "status"
+        ).innerText =
+            "✅ Traffic-aware route calculated successfully.";
+
+    }
+
+
+    catch(error) {
+
+        console.error(
+            "Traffic Route Error:",
+            error
+        );
+
+
+        document.getElementById(
+            "status"
+        ).innerText =
+            "❌ Route calculation failed.";
+
+
+        alert(
+            "Route calculation failed.\n\n" +
+            error.message
+        );
+
+    }
+
+}
+
+// =====================================================
+// OPEN GOOGLE MAPS FOR AMBULANCE JOURNEY
+// =====================================================
+
+function startAmbulanceJourney() {
+
+    if (!ambulancePosition || !hospitalPosition) {
+        alert(
+            "Please select ambulance location and hospital first."
+        );
+        return;
+    }
+
+    const googleMapsUrl =
+        "https://www.google.com/maps/dir/?api=1" +
+        "&origin=" +
+        ambulancePosition[0] +
+        "," +
+        ambulancePosition[1] +
+        "&destination=" +
+        hospitalPosition[0] +
+        "," +
+        hospitalPosition[1] +
+        "&travelmode=driving";
+
+    // Open Google Maps
+    window.open(
+        googleMapsUrl,
+        "_blank"
+    );
+
+    document.getElementById("status").innerText =
+        "🗺️ Google Maps route opened from ambulance location to hospital.";
+}
+
+// =====================================================
+// MOVE AMBULANCE
+// =====================================================
+
+function moveAmbulanceAlongRoute(routePoints) {
+
+    let currentIndex = 0;
+
+    ambulancePosition = [
+        routePoints[0][0],
+        routePoints[0][1]
+    ];
+
+    ambulanceMarker
+        .setLatLng(ambulancePosition)
+        .bindPopup("🚑 Ambulance is moving");
+
+    // Movement speed
+    const intervalTime = 300;
+
+    ambulanceJourneyTimer = setInterval(function() {
+
+        currentIndex++;
+
+        // =================================================
+        // ARRIVED AT HOSPITAL
+        // =================================================
+
+        if (currentIndex >= routePoints.length) {
+
+            clearInterval(ambulanceJourneyTimer);
+
+            ambulanceJourneyRunning = false;
+
+            ambulancePosition = [
+                hospitalPosition[0],
+                hospitalPosition[1]
+            ];
+
+            ambulanceMarker
+                .setLatLng(hospitalPosition)
+                .bindPopup(
+                    "🏥 Ambulance reached hospital"
+                )
+                .openPopup();
+
+            document.getElementById("distance").innerText =
+                "0 km";
+
+            document.getElementById("eta").innerText =
+                "Arrived";
+
+            document.getElementById("traffic").innerText =
+                "Journey complete";
+
+            document.getElementById("status").innerText =
+                "🏥 Ambulance reached the destination hospital.";
+
+            return;
+        }
+
+        // =================================================
+        // MOVE AMBULANCE
+        // =================================================
+
+        const position =
+            routePoints[currentIndex];
+
+        ambulancePosition = [
+            position[0],
+            position[1]
+        ];
+
+        ambulanceMarker.setLatLng(
+            ambulancePosition
+        );
+
+        // Follow ambulance on map
+        map.panTo(
+            ambulancePosition,
+            {
+                animate: false
+            }
+        );
+
+        // =================================================
+        // UPDATE REMAINING DISTANCE
+        // =================================================
+
+        const remainingPoints =
+            routePoints.slice(currentIndex);
+
+        if (remainingPoints.length > 1) {
+
+            const remainingDistance =
+                calculateRouteDistance(
+                    remainingPoints
+                );
+
+            document.getElementById("distance").innerText =
+                remainingDistance.toFixed(2) +
+                " km";
+        }
+
+        document.getElementById("status").innerText =
+            "🚑 Ambulance travelling to hospital...";
+
+    }, intervalTime);
+}
+
+
+// =====================================================
+// CALCULATE ROUTE DISTANCE
+// =====================================================
+
+function calculateRouteDistance(points) {
+
+    let totalDistance = 0;
+
+    for (
+        let i = 1;
+        i < points.length;
+        i++
+    ) {
+
+        totalDistance +=
+            calculateDistanceBetweenPoints(
+                points[i - 1],
+                points[i]
+            );
+    }
+
+    return totalDistance;
+}
+
+
+// =====================================================
+// CALCULATE DISTANCE BETWEEN TWO POINTS
+// =====================================================
+
+function calculateDistanceBetweenPoints(
+    point1,
+    point2
+) {
+
+    const R = 6371;
+
+    const lat1 =
+        point1[0] *
+        Math.PI /
+        180;
+
+    const lat2 =
+        point2[0] *
+        Math.PI /
+        180;
+
+    const dLat =
+        (
+            point2[0] -
+            point1[0]
+        ) *
+        Math.PI /
+        180;
+
+    const dLng =
+        (
+            point2[1] -
+            point1[1]
+        ) *
+        Math.PI /
+        180;
+
+    const a =
+        Math.sin(dLat / 2) *
+        Math.sin(dLat / 2) +
+
+        Math.cos(lat1) *
+        Math.cos(lat2) *
+
+        Math.sin(dLng / 2) *
+        Math.sin(dLng / 2);
+
+    const c =
+        2 *
+        Math.atan2(
+            Math.sqrt(a),
+            Math.sqrt(1 - a)
+        );
+
+    return R * c;
+}
+
+
+</script>
+
+
+
+</body>
+</html>
